@@ -4246,19 +4246,26 @@ do
 		Events.ChildAdded:Connect(hookRemote)
 	end)
 
-	pcall(function()
-		local pg = LocalPlayer:FindFirstChild("PlayerGui")
-		if not pg then
-			return
-		end
-		for _, d in ipairs(pg:GetDescendants()) do
-			if d:IsA("TextLabel") and isFullText(d.Text) then
-				hookLabel(d)
+	task.spawn(function()
+		pcall(function()
+			local pg = LocalPlayer:FindFirstChild("PlayerGui")
+			if not pg then
+				return
 			end
-		end
-		pg.DescendantAdded:Connect(function(d)
-			if d:IsA("TextLabel") then
-				hookLabel(d)
+			pg.DescendantAdded:Connect(function(d)
+				if d:IsA("TextLabel") then
+					hookLabel(d)
+				end
+			end)
+			local scanned = 0
+			for _, d in ipairs(pg:GetDescendants()) do
+				if d:IsA("TextLabel") and isFullText(d.Text) then
+					hookLabel(d)
+				end
+				scanned = scanned + 1
+				if scanned % 250 == 0 then
+					task.wait()
+				end
 			end
 		end)
 	end)
@@ -8222,9 +8229,14 @@ end);
 
 		local function scanContainer(container)
 			pcall(function()
+				local scanned = 0
 				for _, v in ipairs(container:GetDescendants()) do
 					if isHiding then
 						handleTextObject(v)
+					end
+					scanned = scanned + 1
+					if scanned % 250 == 0 then
+						task.wait()
 					end
 				end
 				local conn = container.DescendantAdded:Connect(function(v)
@@ -10856,7 +10868,7 @@ end
 				})
 
 				if Config.AutoCheckSacredBeast then
-					task.delay(6, StartAutoCheckLoop)
+					task.delay(30, StartAutoCheckLoop)
 				end
 			end
 
