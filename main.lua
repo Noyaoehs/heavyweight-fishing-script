@@ -119,6 +119,8 @@ local Config = {
 	UpgradeCharacterDelay = 5,
 	WebhookUrl = "",
 	WebhookSacredBeast = false,
+	AutoCheckSacredBeast = false,
+	SacredCheckInterval = 3,
 	WebhookWeather = false,
 	WebhookMaoshan = false,
 	WebhookTaoist = false,
@@ -603,7 +605,7 @@ local function IsSacredBeastAppeared(dialogueText)
 end
 
 local function NotifySacredBeastWebhook(dialogueText, islandName)
-	if not Config.WebhookSacredBeast then
+	if not Config.WebhookSacredBeast and not Config.AutoCheckSacredBeast then
 		return false
 	end
 	local lower = string.lower(dialogueText or "")
@@ -10739,6 +10741,124 @@ end
 					end)
 				end,
 			})
+
+			do
+				local lastKey = ""
+				local loopRunning = false
+
+				local function IsBusy()
+					return (FishingGui and FishingGui.Visible)
+						or BossState.inFight
+						or BossState.IsBossFightVisual(cachedChar, false)
+				end
+
+				local function RunOneCheck()
+					local waited = 0
+					while Config.AutoCheckSacredBeast and IsBusy() and waited < 90 do
+						task.wait(1)
+						waited = waited + 1
+					end
+					if not Config.AutoCheckSacredBeast or IsCheckingSacredBeast then
+						return
+					end
+					IsCheckingSacredBeast = true
+					local c = cachedChar or LocalPlayer.Character
+					local h = (c and c:FindFirstChild("HumanoidRootPart")) or cachedHrp
+					local backCF = h and h.CFrame
+					local okc, _, chuText = pcall(CheckChuTianjiaoDialogue, 3.5)
+					pcall(function()
+						local pg = LocalPlayer:FindFirstChild("PlayerGui")
+						local d = pg and pg.MainGui.Menu.Dialogue
+						if d then
+							d.Visible = false
+						end
+					end)
+					local c2 = cachedChar or LocalPlayer.Character
+					local h2 = (c2 and c2:FindFirstChild("HumanoidRootPart")) or cachedHrp
+					if backCF and h2 then
+						h2.CFrame = backCF
+					end
+					IsCheckingSacredBeast = false
+					if not okc then
+						return
+					end
+					if IsSacredBeastAppeared(chuText) then
+						local _, islandName = GetSacredBeastIslandCFrame(chuText)
+						local key = tostring(islandName) .. "|" .. tostring(chuText)
+						if key ~= lastKey then
+							lastKey = key
+							NotifySacredBeastWebhook(chuText, islandName)
+							pcall(function()
+								Fluent:Notify({
+									Title = "Sacred Beast",
+									Content = "Found at " .. tostring(islandName) .. " - sent to Discord",
+									Duration = 6,
+								})
+							end)
+						end
+					else
+						lastKey = ""
+					end
+				end
+
+				local function StartAutoCheckLoop()
+					if loopRunning then
+						return
+					end
+					loopRunning = true
+					task.spawn(function()
+						while Config.AutoCheckSacredBeast do
+							if not Config.AutoHopSacredBeast then
+								pcall(RunOneCheck)
+							end
+							local waitSec = math.max(1, tonumber(Config.SacredCheckInterval) or 3) * 60
+							local t0 = os.clock()
+							while Config.AutoCheckSacredBeast and (os.clock() - t0) < waitSec do
+								task.wait(1)
+							end
+						end
+						loopRunning = false
+					end)
+				end
+
+				Tabs.Server:AddToggle("AutoCheckSacredBeastToggle", {
+					Title = "Auto Check Sacred Beast (Discord)",
+					Default = Config.AutoCheckSacredBeast,
+					Callback = function(Value)
+						Config.AutoCheckSacredBeast = Value
+						SaveConfig()
+						if Value then
+							if (Config.WebhookUrl or "") == "" then
+								pcall(function()
+									Fluent:Notify({
+										Title = "Sacred Beast",
+										Content = "Set Webhook URL in Webhook tab first!",
+										Duration = 5,
+									})
+								end)
+							end
+							lastKey = ""
+							StartAutoCheckLoop()
+						end
+					end,
+				})
+
+				Tabs.Server:AddSlider("SacredCheckIntervalSlider", {
+					Title = "Auto Check Interval Min",
+					Default = Config.SacredCheckInterval or 3,
+					Min = 1,
+					Max = 30,
+					Rounding = 0,
+					Callback = function(Value)
+						Config.SacredCheckInterval = Value
+						SaveConfig()
+					end,
+				})
+
+				if Config.AutoCheckSacredBeast then
+					task.delay(6, StartAutoCheckLoop)
+				end
+			end
 
 			task.spawn(function()
 				task.wait(2.5)
