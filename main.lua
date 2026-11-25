@@ -1,3 +1,4 @@
+shared.StarCrowT0 = os.clock()
 local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoahTyrant/Fluent-Ui/refs/heads/main/main.lua"))()
 pcall(function()
 	if Fluent and Fluent.GUI then
@@ -6290,7 +6291,7 @@ end);
 		local list = {}
 		local seen = {}
 		local invFolder = Info and Info:FindFirstChild("Inventory")
-		local rarityMod = Info and (Info:FindFirstChild("FishingAreaRarity") or Info:WaitForChild("FishingAreaRarity", 3))
+		local rarityMod = Info and (Info:FindFirstChild("FishingAreaRarity") or Info:WaitForChild("FishingAreaRarity", 0.5))
 		if rarityMod and rarityMod:IsA("ModuleScript") then
 			local rarityData = GetModuleData(rarityMod)
 			if type(rarityData) == "table" then
@@ -7170,6 +7171,7 @@ end);
 		end
 	end)
 
+	print(string.format("[StarCrow] before window: %.2fs", os.clock() - (shared.StarCrowT0 or os.clock())))
 	local Window = Fluent:CreateWindow({
 		Title = "StarCrow Hub",
 		SubTitle = " | Heavyweigh Fishing",
@@ -7510,7 +7512,7 @@ end);
 		end
 	end
 
-	pcall(function()
+	task.spawn(pcall, function()
 		local inv = PlayerData and PlayerData:WaitForChild("Inventory", 5)
 		if inv then
 			inv.ChildAdded:Connect(function(child)
@@ -8355,7 +8357,7 @@ end);
 		end
 
 		local function ApplyHideNameAndID(enabled)
-			if enabled and isHiding and #hideConnections > 0 then
+			if enabled and isHiding then
 				return
 			end
 			isHiding = enabled
@@ -8443,7 +8445,7 @@ end);
 			Callback = function(Value)
 				Config.HideNameAndID = Value
 				SaveConfig()
-				ApplyHideNameAndID(Value)
+				task.spawn(ApplyHideNameAndID, Value)
 			end,
 		})
 	end
@@ -10257,7 +10259,7 @@ if not getgenv().StarCrowQueuedRan then
     repeat task.wait(0.5) until workspace:FindFirstChild("Terrain") and (#workspace:GetChildren() > 10)
     repeat task.wait(0.5) until game:GetService("Players").LocalPlayer and (game:GetService("Players").LocalPlayer.Character or game:GetService("Players").LocalPlayer.CharacterAdded:Wait())
     task.wait(2)
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/NoahTyrant/StarCrow/refs/heads/main/Heavyweigh%20Fishing"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Noyaoehs/heavyweight-fishing-script/refs/heads/main/main.lua"))()
 end
 ]])
 				end)
@@ -11156,4 +11158,5 @@ end
 	end
 
 	Window:SelectTab(1)
+	print(string.format("[StarCrow] UI ready: %.2fs", os.clock() - (shared.StarCrowT0 or os.clock())))
 end)()
