@@ -84,6 +84,7 @@ local Config = {
 	SavedPos = false,
 	AutoTPPos = false,
 	AutoFarmIsland = false,
+	AutoFarmUseSavedPos = true,
 	SelectedFarmIsland = "Beginning Isle",
 	AutoFarmMaterialBait = false,
 	AutoCraftMaterialBait = true,
@@ -1274,7 +1275,7 @@ local function StepAutoFarmIsland(char)
 	if BossState.IsPriorityActive(char) then
 		return
 	end
-	local targetCF = GetIslandFarmCFrame()
+	local targetCF = (Config.AutoFarmUseSavedPos and GetSavedCFrame()) or GetIslandFarmCFrame()
 	if not targetCF then
 		return
 	end
@@ -7304,6 +7305,18 @@ end);
 			end
 			SaveConfig()
 			if Value then
+				StepAutoFarmIsland(LocalPlayer.Character)
+			end
+		end,
+	})
+
+	Tabs.Main:AddToggle("AutoFarmUseSavedPosToggle", {
+		Title = "Farm At Saved Position",
+		Default = Config.AutoFarmUseSavedPos,
+		Callback = function(Value)
+			Config.AutoFarmUseSavedPos = Value
+			SaveConfig()
+			if Value and Config.AutoFarmIsland then
 				StepAutoFarmIsland(LocalPlayer.Character)
 			end
 		end,
