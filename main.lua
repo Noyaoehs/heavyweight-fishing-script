@@ -86,6 +86,7 @@ local Config = {
 	AutoFarmIsland = false,
 	SelectedFarmIsland = "Beginning Isle",
 	AutoFarmMaterialBait = false,
+	AutoCraftMaterialBait = true,
 	SelectedMaterialBait = "Rainbow Bait",
 	SelectedBuyRod = "",
 	SelectedSecretRod = "",
@@ -1401,7 +1402,7 @@ local function GetMaterialFishCount(fishName)
 				matchedName = true
 			end
 		end
-		if matchedName then
+		if matchedName and not string.find(rawName, "Favorite", 1, true) then
 			count = count + 1
 		end
 	end
@@ -1474,6 +1475,7 @@ local function GetMaterialTargetIsland(fishName)
 end
 
 local lastMatNotifyTick = 0
+local lastMatCraftTick = 0
 local function StepAutoFarmMaterialBait(char)
 	if not Config.AutoFarmMaterialBait or IsCheckingSacredBeast or IsBuyingSecretRod then
 		isMaterialFarmCastingAllowed = false
@@ -1497,6 +1499,25 @@ local function StepAutoFarmMaterialBait(char)
 		isMaterialFarmCastingAllowed = false
 		currentMaterialTargets = {}
 		return
+	end
+
+	if Config.AutoCraftMaterialBait then
+		local nowCraft = os.clock()
+		if nowCraft - lastMatCraftTick >= 3 then
+			local ready = true
+			for _, item in ipairs(recipe) do
+				if GetMaterialFishCount(item.name) < 1 then
+					ready = false
+					break
+				end
+			end
+			if ready then
+				lastMatCraftTick = nowCraft
+				pcall(function()
+					CraftBaitEvent:FireServer(selectedBait, 1)
+				end)
+			end
+		end
 	end
 
 	local curWeather = string.lower(tostring(workspace:GetAttribute("Weather") or ""))
@@ -7593,6 +7614,15 @@ end);
 			if Value then
 				StepAutoFarmMaterialBait(LocalPlayer.Character)
 			end
+		end,
+	})
+
+	Tabs.Main:AddToggle("AutoCraftMaterialBaitToggle", {
+		Title = "Auto Craft When Materials Ready",
+		Default = Config.AutoCraftMaterialBait,
+		Callback = function(Value)
+			Config.AutoCraftMaterialBait = Value
+			SaveConfig()
 		end,
 	})
 
